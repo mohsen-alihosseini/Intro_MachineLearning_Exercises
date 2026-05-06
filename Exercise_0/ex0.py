@@ -156,14 +156,12 @@ class ImageProcessor:
 
         # rotations == 0: no change
         if rotations == 1:  # 90 degrees clockwise
-        # Rotate 90° clockwise = transpose then reverse rows
-            self._image = np.transpose(self._image, (1, 0, 2)) if len(self._image.shape) == 3 else np.transpose(self._image)
-            self._image = self._image[::-1, ...]
-        elif rotations == 2:  # 180 degrees
+        # Rotate 90° clockwise = transpose then reverse rows -x
+            self._image = np.transpose(self._image, axes=(1, 0, 2))[:, ::-1]
+        elif rotations == 2:  # 180 degrees upside down and then mirroring
             self._image = self._image[::-1, ::-1]
         elif rotations == 3:  # 270 degrees clockwise (or 90 counter-clockwise)
-            self._image = np.transpose(self._image, (1, 0, 2)) if len(self._image.shape) == 3 else np.transpose(self._image)
-            self._image = self._image[:, ::-1]
+           self._image = np.transpose(self._image, axes=(1, 0, 2))[::-1, :]
         # rotations == 0: no change
 
     def flip_image(self, flip_value: int):
@@ -220,7 +218,19 @@ class ImageProcessor:
         new_width (int): Width of the resized image.
         """
         # ToDo: Resize the image. Research the available options in CV2.
-        self._image = cv2.resize(self._image, (new_width, new_height))
+        # self._image = cv2.resize(self._image, (new_width, new_height))
+        x = self._image.shape[0]
+        y = self._image.shape[1]
+        if x < 1 or y < 1:
+            raise ValueError("The provided new width and height must be greater than 0!")
+
+        if x < new_width and y < new_height:
+            self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+        elif x > new_width and y > new_height:
+            self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_AREA)
+        else:
+            self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
+            
 
 if __name__ == '__main__':
     processor = ImageProcessor(image_path=IMAGE_PATH, colour_type="BGR")

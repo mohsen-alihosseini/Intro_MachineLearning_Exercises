@@ -163,6 +163,7 @@ class ImageProcessor:
         elif rotations == 3:  # 270 degrees clockwise (or 90 counter-clockwise)
            self._image = np.transpose(self._image, axes=(1, 0, 2))[::-1, :]
         # rotations == 0: no change
+    
 
     def flip_image(self, flip_value: int):
         """
@@ -230,7 +231,8 @@ class ImageProcessor:
             self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_AREA)
         else:
             self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
-            
+
 
 if __name__ == '__main__':
     processor = ImageProcessor(image_path=IMAGE_PATH, colour_type="BGR")
+

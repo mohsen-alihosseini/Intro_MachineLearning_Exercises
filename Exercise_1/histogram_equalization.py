@@ -16,22 +16,40 @@ def compute_histogram(image: np.ndarray) -> np.ndarray:
     # ToDo: Create a histogram for the given image (256 values).
     # ToDo: Don't use functions like np.histogram.
     # ToDo: It is easier if you flatten your image first.
-    histogram = np.zeros(0)
+    histogram = np.zeros(256)
+    flatten_pixcel= image.flatten()
+    for pix in flatten_pixcel:
+        histogram[pix] +=1
     return histogram
 
 
 def compute_cdf(histogram: np.ndarray) -> np.ndarray:
     # ToDo: Compute the CDF.
     # ToDo: Don't forget to normalize it (turn it into a distribution).
-    cdf = np.zeros(0)
+    cdf = np.zeros(256)
+    cumulative=0
+    total_pixcel = np.sum(histogram)
+    for i in range(256):
+        cumulative +=histogram[i]
+        cdf[i]= cumulative/total_pixcel
     return cdf
 
 
 def equalize_image(image: np.ndarray, cdf: np.ndarray) -> np.ndarray:
     # ToDo: Apply histogram equalization to the given image.
     # ToDo: Hint: Flatten the image first and reshape it again in the end.
-    equalized_image = np.zeros(0)
-    return equalized_image
+    equalized_image = np.zeros(image.shape)
+    cdf_min =cdf.min()
+    # Create a lookup table (LUT) using the formula 
+    # This is faster than calculating for every single pixel
+    lut = np.floor(((cdf - cdf_min) / (1 - cdf_min)) * 255)
+    lut = np.clip(lut, 0, 255).astype(np.uint8)
+    
+    # Map the original image pixels to the new values
+    flat_image = image.flatten()
+    equalized_flat = lut[flat_image]
+    return equalized_flat.reshape(image.shape)
+    # return equalized_image
 
 
 def save_image(image: np.ndarray, path: str) -> None:

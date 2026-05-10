@@ -21,24 +21,41 @@ def add_gaussian_noise(image: np.ndarray, mean: float = 0.0, sigma: float = 10.0
     # ToDo: Generate gaussian noise and add it to the image.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
     # ToDo: Hint: Don't forget to clip the values.
+    gaussian_noise = np.random.normal(mean,sigma,image.shape)
+    image_noise = image.astype(np.float16) + gaussian_noise
+    image = np.clip(image_noise,0,255).astype(np.uint8)
     return image
 
 
 def add_salt_and_pepper_noise(image: np.ndarray, salt_prob: float = 0.01, pepper_prob: float = 0.01) -> np.ndarray:
     # ToDo: Generate random salt and pepper noise based on the provided probabilities.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
+    noisy_image = image.copy()
+    rand_prob_pixcels = np.random.random(image.shape)       #1.creat a random probeblity for each pixcel
+    # print(noisy_image)
+    noisy_image[rand_prob_pixcels > (1-salt_prob)] = 255          #2.make a mask if probablity for and pixcel < salt_prob make it 255
+    noisy_image[rand_prob_pixcels < pepper_prob] =0
+    image = noisy_image.astype(np.uint8)
     return image
 
 
 def add_poisson_noise(image: np.ndarray) -> np.ndarray:
     # ToDo: Add poisson noise to the image.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
+    noise = np.random.poisson(image.astype(np.float32))
+    image=np.clip(noise, 0, 255).astype(np.uint8)
     return image
+    
+    
 
 
 def add_uniform_noise(image: np.ndarray, low: float = -20.0, high: float = 20.0) -> np.ndarray:
     # ToDo: Add uniform noise to the image, which is sampled uniformly from the available values.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
+    noise = np.random.uniform(low, high, image.shape)
+    noisy_image = image.astype(float) + noise
+    image= np.clip(noisy_image, 0, 255).astype(np.uint8)
+
     return image
 
 

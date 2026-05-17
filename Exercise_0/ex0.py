@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 # Do not alter this path!
 IMAGE_PATH: str = "data/Image01.png"
-# IMAGE_PATH: str = "data/gray.jpg"
 
 
 class ImageProcessor:
@@ -27,9 +26,6 @@ class ImageProcessor:
         self._colour_type: str = colour_type
         self._image: np.ndarray = cv2.imread(image_path)
 
-
-        
-
     def get_image_data(self) -> tuple[np.ndarray, str]:
         """
         Return the image data (image and colour scheme).
@@ -45,13 +41,9 @@ class ImageProcessor:
         """
 
         # ToDo: Show the image depending on the colour type.
-        if self._colour_type == "Gray":
-            plt.imshow(self._image, cmap='gray')
-        else:
-            plt.imshow(self._image)
-        plt.axis('off')
-        plt.show()
-        
+        cv2.imshow("Image", self._image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     def save_image(self, image_title: str):
         """
@@ -65,12 +57,7 @@ class ImageProcessor:
         total_image_path: str = os.path.join(self._image_directory, image_title)
 
         # ToDo: Save the image.
-        if self._colour_type == "RGB":
-            # Convert back to BGR for cv2 saving
-            image_to_save = cv2.cvtColor(self._image, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(total_image_path, image_to_save)
-        else:
-            cv2.imwrite(total_image_path, self._image)
+        cv2.imwrite(total_image_path, self._image)
 
     def convert_colour(self):
         """
@@ -82,13 +69,14 @@ class ImageProcessor:
             raise ValueError("The function only works for colour images!")
 
         # ToDo: Perform the colour conversion.
+        # das Bild ist ja [Hoehe, Breite, [Kanal 1, 2, 3 (, Alpha)]] gespeichert
         self._image = self._image[:, :, [2, 1, 0]]
 
         # ToDo: Update the colour type.
-        if self._colour_type == "RGB":
-            self._colour_type = "BGR"
-        else:
+        if self._colour_type == "BGR":
             self._colour_type = "RGB"
+        else:
+            self._colour_type = "BGR"
 
     def clip_image(self, clip_min: int, clip_max: int):
         """
@@ -101,6 +89,7 @@ class ImageProcessor:
         clip_max (int): Maximum image colour intensity.
         """
         # ToDo: Clip the image values to the given values.
+        # indiziert jeden Wert bloß das Feld ist verdammt 3D, deswegen dauert's so lange, bis ich's mir vorstelle GRRRRR
         self._image[self._image < clip_min] = clip_min
         self._image[self._image > clip_max] = clip_max
 
@@ -118,24 +107,21 @@ class ImageProcessor:
             raise ValueError("The function only works for colour images!")
 
         if method == "lightness":
-            # Lightness = (max(R,G,B) + min(R,G,B)) / 2
-            max_val = np.max(self._image, axis=2)
-            min_val = np.min(self._image, axis=2)
-            self._image = ((max_val + min_val) / 2).astype(np.uint8)
+            gray = (self._image.max(axis=2) + self._image.min(axis=2)) / 2
+            self._image[:, :, 0] = gray
+            self._image[:, :, 1] = gray
+            self._image[:, :, 2] = gray
 
         if method == "average":
-          # Average = (R + G + B) / 3
-          self._image = np.mean(self._image, axis=2).astype(np.uint8)
+            gray = self._image[:, :, 0] / 3 + self._image[:, :, 1] / 3 + self._image[:, :, 2] / 3
+            self._image[:, :, 0] = gray
+            self._image[:, :, 1] = gray
+            self._image[:, :, 2] = gray
 
         if method == "luminosity":
-            if self._colour_type == "RGB":
-                self._image = (0.21 * self._image[:, :, 0] + 
-                            0.72 * self._image[:, :, 1] + 
-                            0.07 * self._image[:, :, 2]).astype(np.uint8)
-            else:  # BGR
-                self._image = (0.07 * self._image[:, :, 0] +  # B channel (0.07)
-                            0.72 * self._image[:, :, 1] +  # G channel (0.72)
-                            0.21 * self._image[:, :, 2]).astype(np.uint8)  # R channel (0.21)
+            self._image[:, :, 0] = self._image[:, :, 0] * 0.114
+            self._image[:, :, 1] = self._image[:, :, 0] * 0.587
+            self._image[:, :, 2] = self._image[:, :, 0] * 0.299
 
         # ToDo: Update the colour type.
         self._colour_type = "Gray"
@@ -156,14 +142,15 @@ class ImageProcessor:
 
         # rotations == 0: no change
         if rotations == 1:  # 90 degrees clockwise
-        # Rotate 90° clockwise = transpose then reverse rows -x
-            self._image = np.transpose(self._image, axes=(1, 0, 2))[:, ::-1]
-        elif rotations == 2:  # 180 degrees upside down and then mirroring
+        # Rotate 90° clockwise = transpose then reverse rows
+            self._image = np.transpose(self._image, (1, 0, 2)) if len(self._image.shape) == 3 else np.transpose(self._image)
+            self._image = self._image[::-1, ...]
+        elif rotations == 2:  # 180 degrees
             self._image = self._image[::-1, ::-1]
         elif rotations == 3:  # 270 degrees clockwise (or 90 counter-clockwise)
-           self._image = np.transpose(self._image, axes=(1, 0, 2))[::-1, :]
+            self._image = np.transpose(self._image, (1, 0, 2)) if len(self._image.shape) == 3 else np.transpose(self._image)
+            self._image = self._image[:, ::-1]
         # rotations == 0: no change
-    
 
     def flip_image(self, flip_value: int):
         """
@@ -177,11 +164,11 @@ class ImageProcessor:
             raise ValueError("The provided flip value must be either 0, 1 or 2!")
 
         # ToDo: Flip the image using indexing.
-        if flip_value == 0:  # Horizontal flip
-            self._image = self._image[:, ::-1]
-        elif flip_value == 1:  # Vertical flip
+        if flip_value == 0:
             self._image = self._image[::-1, :]
-        elif flip_value == 2:  # Both flips
+        elif flip_value == 1:
+            self._image = self._image[:, ::-1]
+        else:
             self._image = self._image[::-1, ::-1]
 
     def crop_center(self, new_height: int, new_width: int):
@@ -194,21 +181,18 @@ class ImageProcessor:
         new_width (int): Width of the cropped image.
         """
         # ToDo: Check that the given parameters are valid!
-        if new_height <= 0 or new_width <= 0:
-            raise ValueError("Height and width must be positive!")
-        if new_height > self._image.shape[0] or new_width > self._image.shape[1]:
-            raise ValueError("Given Cropped dimensions are bigger than original image!!!")
-
+        # i.g. if it's 0 (around the center) it means the central pixel itself
+        # if it's at least 1 it's the neighbour pixels to the central one
+        if new_width < 0 or new_height < 0:
+            raise ValueError("The provided new width and height must be greater at least 0 around the center pixel!")
 
         # ToDo: Crop the image around the center.
-        orig_height, orig_width = self._image.shape[0], self._image.shape[1]
-        # Calculate starting hight width based on new hight width
-        start_y = (orig_height - new_height) // 2
-        start_x = (orig_width - new_width) // 2
-    
-        # Crop the image
-        self._image = self._image[start_y:start_y + new_height, start_x:start_x + new_width]
-
+        center_x = self._image.shape[0] // 2
+        center_y = self._image.shape[1] // 2
+        if new_width == 0 and new_height == 0:
+            self._image = self._image[center_x, center_y]
+        else:
+            self._image = self._image[center_x - new_width: center_x + new_width, center_y - new_height: center_y + new_height]
 
     def resize_image(self, new_height: int, new_width: int):
         """
@@ -219,20 +203,7 @@ class ImageProcessor:
         new_width (int): Width of the resized image.
         """
         # ToDo: Resize the image. Research the available options in CV2.
-        # self._image = cv2.resize(self._image, (new_width, new_height))
-        x = self._image.shape[0]
-        y = self._image.shape[1]
-        if x < 1 or y < 1:
-            raise ValueError("The provided new width and height must be greater than 0!")
-
-        if x < new_width and y < new_height:
-            self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
-        elif x > new_width and y > new_height:
-            self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_AREA)
-        else:
-            self._image = cv2.resize(self._image, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
-
+        self._image = cv2.resize(self._image, (new_width, new_height))
 
 if __name__ == '__main__':
     processor = ImageProcessor(image_path=IMAGE_PATH, colour_type="BGR")
-

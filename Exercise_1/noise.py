@@ -21,25 +21,45 @@ def add_gaussian_noise(image: np.ndarray, mean: float = 0.0, sigma: float = 10.0
     # ToDo: Generate gaussian noise and add it to the image.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
     # ToDo: Hint: Don't forget to clip the values.
-    return image
+    image = image.astype(np.float32)
+    gauss = np.random.normal(loc=mean, scale=sigma, size=image.shape)
+    image += gauss
+    return np.clip(image, 0, 255).astype(np.uint8)
 
 
 def add_salt_and_pepper_noise(image: np.ndarray, salt_prob: float = 0.01, pepper_prob: float = 0.01) -> np.ndarray:
     # ToDo: Generate random salt and pepper noise based on the provided probabilities.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
+    salt = np.random.rand(*image.shape[:2])
+    pepper = np.random.rand(*image.shape[:2])
+    salt = salt < salt_prob
+    pepper = pepper < pepper_prob
+    if image.ndim == 2:
+        image[salt] = 255
+        image[pepper] = 0
+    else:
+        image[salt] = [255, 255, 255]
+        image[pepper] = [0, 0, 0]
     return image
 
 
 def add_poisson_noise(image: np.ndarray) -> np.ndarray:
     # ToDo: Add poisson noise to the image.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
-    return image
+    image = image.astype(np.float32)
+    image /= 255.0
+    image = np.random.poisson(image * 255.0) / 255.0
+    image *= 255.0
+    return np.clip(image, 0, 255).astype(np.uint8)
 
 
 def add_uniform_noise(image: np.ndarray, low: float = -20.0, high: float = 20.0) -> np.ndarray:
     # ToDo: Add uniform noise to the image, which is sampled uniformly from the available values.
     # ToDo: Hint: Look at the options among np.random to generate the noise.
-    return image
+    image = image.astype(np.float32)
+    noise = np.random.uniform(low, high, image.shape)
+    image += noise
+    return np.clip(image, 0, 255).astype(np.uint8)
 
 
 def display_images(original: np.ndarray, processed: np.ndarray, title: str) -> None:

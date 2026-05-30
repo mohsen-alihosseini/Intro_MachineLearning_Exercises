@@ -88,6 +88,8 @@ def gradientAndDirection(gx, gy):
     g = g.astype(int)
     
     return g, theta
+
+
     
 
 

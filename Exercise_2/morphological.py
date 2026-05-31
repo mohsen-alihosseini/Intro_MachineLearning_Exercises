@@ -8,12 +8,16 @@ def extract_region(padded_image: np.ndarray, center_row: int, center_col: int, w
     # ToDo: Return the surrounding area around that center pixel with the given size (window_size).
     # ToDo: Use slicing.
 
-    return np.zeros((window_size, window_size))
+    radius = window_size // 2
+    return padded_image[center_row - radius:center_row + radius + 1, center_col - radius:center_col + radius + 1]
 
 
 def pad_image(image: np.ndarray, padding_size: int) -> np.ndarray:
     # Pad the image with zeros.
-    return np.pad(image, pad_width=padding_size, mode='constant', constant_values=0)
+    h, w = image.shape
+    padded = np.zeros((h + 2 * padding_size, w + 2 * padding_size),dtype=image.dtype)
+    padded[padding_size:padding_size + h, padding_size:padding_size + w] = image
+    return padded
 
 
 def erode_binary(image: np.ndarray, structuring_element: np.ndarray) -> np.ndarray:
@@ -24,10 +28,29 @@ def erode_binary(image: np.ndarray, structuring_element: np.ndarray) -> np.ndarr
 
     # ToDo: Create the padded image and an empty output image that can be filled later.
     output = np.zeros_like(image)
-
     # ToDo: Iterate over the provided image and perform erosion around each pixel.
     # ToDo: Hint: Use the extract_region function to get the area around each pixel.
     # ToDo: Hint: Don't forget that the extract region function receives the padded image and the corresponding centers.
+    padding_size = se_size // 2
+    padded = pad_image(image, padding_size)
+
+    # Positions where the structuring element is active
+    mask = structuring_element == 1
+
+    # Iterate over all pixels
+    for row in range(image.shape[0]):
+        for col in range(image.shape[1]):
+
+            region = extract_region(
+                padded,
+                row + padding_size,
+                col + padding_size,
+                se_size
+            )
+
+            # Erosion: all active SE positions must overlap foreground
+            if np.all(region[mask] == 1):
+                output[row, col] = 1
     return output
 
 
@@ -39,24 +62,47 @@ def dilate_binary(image: np.ndarray, structuring_element: np.ndarray) -> np.ndar
 
     # ToDo: Create the padded image and an empty output image that can be filled later.
     output = np.zeros_like(image)
-
+    padding_size = se_size // 2
     # ToDo: Iterate over the provided image and perform dilation around each pixel.
     # ToDo: Hint: Use the extract_region function to get the area around each pixel.
     # ToDo: Hint: Don't forget that the extract region function receives the padded image and the corresponding centers.
+    padded = pad_image(image, padding_size)
+    mask = structuring_element == 1
+
+    # Iterate over all pixels
+    for row in range(image.shape[0]):
+        for col in range(image.shape[1]):
+
+            region = extract_region(
+                padded,
+                row + padding_size,
+                col + padding_size,
+                se_size
+            )
+
+            # Dilation: at least one active SE position overlaps foreground
+            if np.any(region[mask] == 1):
+                output[row, col] = 1
     return output
 
 
 def open_binary(input_image: np.ndarray, structuring_element: np.ndarray, iterations: int = 1) -> np.ndarray:
     # ToDo: Perform opening (erosion followed by dilation).
     result = input_image.copy()
-
+    for _ in range(iterations):
+        result = erode_binary(result, structuring_element)
+    for _ in range(iterations):
+        result = dilate_binary(result, structuring_element)
     return result
 
 
 def close_binary(input_image: np.ndarray, structuring_element: np.ndarray, iterations: int = 1) -> np.ndarray:
     # ToDo: Perform closing (dilation followed by erosion).
     result = input_image.copy()
-
+    for _ in range(iterations):
+        result = dilate_binary(result, structuring_element)
+    for _ in range(iterations):
+        result = erode_binary(result, structuring_element)
     return result
 
 

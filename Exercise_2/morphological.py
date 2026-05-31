@@ -7,6 +7,7 @@ def extract_region(padded_image: np.ndarray, center_row: int, center_col: int, w
     # The function receives a padded image (pad_image) and the current pixel of our padded image.
     # ToDo: Return the surrounding area around that center pixel with the given size (window_size).
     # ToDo: Use slicing.
+
     return np.zeros((window_size, window_size))
 
 

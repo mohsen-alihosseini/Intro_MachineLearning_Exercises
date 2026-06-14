@@ -28,16 +28,17 @@ def simpleAlignment(img, size=128):
     # Step 2: Binarize the resized image with Otsu thresholding.
     # Allowed: cv2.threshold with Otsu.
 
-    threshhold = cv.threshold(img,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
+    _, threshhold = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
     # Step 3: Find the bounding box of the foreground with NumPy only.
     # Hint: The symbols are dark, the background is bright.
     # Allowed: NumPy operations such as argwhere, min, max, slicing.
     # Not allowed: cv2.findContours, connectedComponents, or similar high-level localization helpers.
 
-    fg = resized < threshhold
-    y, x = np.argwhere(fg)
-    xmin, xmax, ymin, ymax = x.min(), x.max(), y.min(), y.max()
+    fg = np.argwhere(threshhold == 255)
+    # y, x = np.argwhere(threshhold == 255)
+    ymin, xmin = fg.min(axis=0)
+    ymax, xmax = fg.max(axis=0)
 
     # Step 4: Crop the grayscale region of interest from the resized image.
     # Use NumPy slicing.
@@ -51,17 +52,28 @@ def simpleAlignment(img, size=128):
 
     h, w = crop.shape
     # if empty
-    if h == 0 or w == 0:
-        return crop
+    #if h == 0 or w == 0:
+    #    return crop
 
     # compute scale to fit within (max_w, max_h) while preserving aspect ratio
     scale = min(1.0, min(w_max / w, h_max / h))  # <=1: don't upscale
     new_w = max(1, int(round(w * scale)))
     new_h = max(1, int(round(h * scale)))
 
-    resized = cv2.resize(crop, (new_w, new_h), interpolation=interp)
+    resized = cv2.resize(crop, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
     # Step 6: Place the resized symbol in the center of a blank canvas.
     # Use NumPy indexing and array assignment for centering.
 
-    canvas = np.full((h_max, w_max), background, dtype=resized.dtype)
+    h, w = resized.shape[:2]
+    if h > size or w > size:
+        raise ValueError("crop must fit within the canvas")
+
+    canvas = np.full((size, size), 255, dtype=crop.dtype)
+
+    y_off = (size - h) // 2
+    x_off = (size - w) // 2
+
+    canvas[y_off: y_off + h, x_off: x_off + w] = resized
+
+    return canvas

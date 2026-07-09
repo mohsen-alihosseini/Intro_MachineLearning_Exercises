@@ -37,11 +37,22 @@ class KNNClassifier:
             - check that len(X) == len(y)
             - return self
         """
-        pass
+        self.X_train = np.array(X)
+        self.y_train = np.array(y)
+        if self.X_train.shape != (len(X), len(X[0])):
+            raise ValueError("Shape of X_train does not match (n_samples, n_features)")
+        if len(self.X_train) != len(self.y_train):
+            raise ValueError("Length of X_train and y_train does not match")
+        return self
 
     def _euclidean_distances(self, x):
         """Return the Euclidean distance from x to all training samples."""
-        pass
+        n_samples = len(x)
+        n_features = len(x[0])
+        distances = []
+        for sample in range(n_samples):
+            distance = np.sqrt(np.sum())
+            pass
 
     def _cosine_distances(self, x):
         """

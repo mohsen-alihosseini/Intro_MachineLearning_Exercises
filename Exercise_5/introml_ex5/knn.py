@@ -39,9 +39,9 @@ class KNNClassifier:
             - check that len(X) == len(y)
             - return self
         """
-        self.X_train = np.array(X)
-        self.y_train = np.array(y)
-        if self.X_train.shape != (len(X), len(X[0])):
+        self.X_train = np.asarray(X)
+        self.y_train = np.asarray(y)
+        if self.X_train.ndim != 2:
             raise ValueError("Shape of X_train does not match (n_samples, n_features)")
         if len(self.X_train) != len(self.y_train):
             raise ValueError("Length of X_train and y_train does not match")
@@ -49,7 +49,10 @@ class KNNClassifier:
 
     def _euclidean_distances(self, x):
         """Return the Euclidean distance from x to all training samples."""
-        distances = np.sqrt(np.sum((self.X_train - x)**2, axis=1))
+        x = np.asarray(x)
+        if x.ndim == 1:
+            x = x.reshape(1, -1)
+        distances = np.sqrt(np.sum((self.X_train[None, :, :] - x[:, None, :])**2, axis=2))
         return distances
 
     def _cosine_distances(self, x):
@@ -106,6 +109,10 @@ class KNNClassifier:
             - predict by majority vote
             - optionally save neighbour plots when plot_neighbors is True
         """
+
+        if not hasattr(self, "X_train") or self.X_train is None:
+            raise ValueError("fit() must be called before predict().")
+
         # Convert input data to a NumPy array.
         X = np.asarray(X)
 
@@ -116,6 +123,7 @@ class KNNClassifier:
         predictions = []
         # Iterate over each test sample to predict its label.
         for sample_index, x in enumerate(X):
+            x = x.reshape(1, -1)
             if self.metric == "euclidean":
                 # Compute Euclidean distances from x to all training samples.
                 distance = self._euclidean_distances(x)

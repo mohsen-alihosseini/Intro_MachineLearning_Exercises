@@ -21,7 +21,7 @@ class NBNNClassifier:
         """
         self.X_train = np.array(X)
         self.y_train = np.array(y)
-        if self.X_train.shape != (len(X), len(X[0])):
+        if self.X_train.ndim != 2:
             raise ValueError("Shape of X_train does not match (n_samples, n_features)")
         if len(self.X_train) != len(self.y_train):
             raise ValueError("Length of X_train and y_train does not match")
@@ -30,7 +30,7 @@ class NBNNClassifier:
 
     def _euclidean_distances(self, x):
         """Return the Euclidean distance from x to all training samples."""
-        distance = np.sqrt(np.sum((self.X_train[:, None, :] - x[None, :, :])**2, axis=2))
+        distance = np.sqrt(np.sum((x[:, None, :] - self.X_train[None, :, :])**2, axis=2))
         return distance
 
     def _cosine_distances(self, x):
@@ -41,11 +41,11 @@ class NBNNClassifier:
             cosine_distance = 1 - cosine_similarity
         """
         eps = 1e-12
-        mtrx = self.X_train @ x.T
+        mtrx = x @ self.X_train.T
 
         X_norm = np.sqrt(np.sum(self.X_train**2, axis=1))
         x_norm = np.sqrt(np.sum(x**2, axis=1))
-        denom = X_norm[:, None] * x_norm[None, :]
+        denom = x_norm[:, None] * X_norm[None, :]
         cosine_similarity = np.zeros_like(mtrx, dtype=float)
         valid = denom > eps
         cosine_similarity[valid] = mtrx[valid] / denom[valid]
@@ -58,14 +58,14 @@ class NBNNClassifier:
         For each class, use the distance of the nearest training sample from
         that class. The predicted class is the class with the smallest score.
         """
-        n_samples = distances.shape[0]
-        scores = np.full((n_samples, self.classes_.size), np.inf, dtype=float)
+        n_queries = distances.shape[0]
+        scores = np.full((n_queries, self.classes_.size), np.inf, dtype=float)
 
         for i, cls in enumerate(self.classes_):
-            mask = (self.y_train == cls)
+            mask = (self.y_train == cls)  # (n_train,)
             if np.any(mask):
-                # nearest training sample distance for this class
-                scores[:, i] = np.min(distances[mask, :], axis=0)
+                # nearest distance among training samples of this class
+                scores[:, i] = np.min(distances[:, mask], axis=1)
         return scores
 
     def predict(self, X):
@@ -92,4 +92,4 @@ class NBNNClassifier:
 
         scores = self._class_scores(distance)
         class_indices = np.argmin(scores, axis=1)
-        return self.y_train[class_indices]
+        return self.classes_[class_indices]

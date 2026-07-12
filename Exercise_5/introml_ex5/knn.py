@@ -1,8 +1,6 @@
 from pathlib import Path
 
 import numpy as np
-from numpy.ma.core import indices
-from scipy.spatial import distance
 
 from visualization import plot_knn_neighbors
 
@@ -74,7 +72,7 @@ class KNNClassifier:
         cosine_similarity = np.zeros_like(mtrx, dtype=float)
         valid = denom > eps
         cosine_similarity[valid] = mtrx[valid] / denom[valid]
-        return 1.0 - cosine_similarity
+        return (1.0 - cosine_similarity).T
 
     def _majority_vote(self, neighbor_labels):
         """
@@ -118,7 +116,7 @@ class KNNClassifier:
 
         # If a single sample is passed, turn it into shape (1, n_features).
         if X.ndim == 1:
-            X.reshape(1, -1)
+            X = X.reshape(1, -1)
 
         predictions = []
         # Iterate over each test sample to predict its label.
@@ -126,19 +124,21 @@ class KNNClassifier:
             x = x.reshape(1, -1)
             if self.metric == "euclidean":
                 # Compute Euclidean distances from x to all training samples.
-                distance = self._euclidean_distances(x)
+                dist = self._euclidean_distances(x)
             elif self.metric == "cosine":
                 # Compute cosine distances from x to all training samples.
-                distance = self._cosine_distances(x)
+                dist = self._cosine_distances(x)
             else:
                 raise ValueError(f"Unsupported metric: {self.metric}")
 
             # Find the indices of the k nearest neighbours.
-            nn_indices = np.argsort(distance)[:self.n_neighbors]
+            nn_indices = np.argsort(dist, axis=1)[:, :self.n_neighbors]
+            nn_indices = nn_indices[0]
             # Get the labels of the nearest neighbours.
             nn_labels = self.y_train[nn_indices]
             # Find the most common label and append it to predictions.
             predicted_label = self._majority_vote(nn_labels)
+            predicted_label = np.asarray(predicted_label).item()
             predictions.append(predicted_label)
             if self.plot_neighbors and self.image_shape is not None:
                 test_image = x.reshape(self.image_shape)

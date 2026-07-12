@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import numpy as np
+from numpy.ma.core import indices
+from scipy.spatial import distance
 
 from visualization import plot_knn_neighbors
 
@@ -47,12 +49,8 @@ class KNNClassifier:
 
     def _euclidean_distances(self, x):
         """Return the Euclidean distance from x to all training samples."""
-        n_samples = len(x)
-        n_features = len(x[0])
-        distances = []
-        for sample in range(n_samples):
-            distance = np.sqrt(np.sum())
-            pass
+        distances = np.sqrt(np.sum((self.X_train - x)**2, axis=1))
+        return distances
 
     def _cosine_distances(self, x):
         """
@@ -64,7 +62,16 @@ class KNNClassifier:
 
         Make sure that zero vectors do not cause a division-by-zero error.
         """
-        pass
+        X = self.X_train
+        mtrx = X @ x.T
+        eps = 1e-12
+        X_norm = np.sqrt(np.sum(X**2, axis=1))
+        x_norm = np.sqrt(np.sum(x**2, axis=1))
+        denom = X_norm[:, None] * x_norm[None, :]
+        cosine_similarity = np.zeros_like(mtrx, dtype=float)
+        valid = denom > eps
+        cosine_similarity[valid] = mtrx[valid] / denom[valid]
+        return 1.0 - cosine_similarity
 
     def _majority_vote(self, neighbor_labels):
         """
@@ -74,7 +81,18 @@ class KNNClassifier:
             np.unique(..., return_counts=True) is useful here.
             If there is a tie, choose the smallest label after sorting.
         """
-        pass
+        if neighbor_labels.ndim == 1:
+            labels, counts = np.unique(neighbor_labels, return_counts=True)
+            max_count = counts.max()
+            return labels[counts == max_count].min()
+        labels = np.unique(neighbor_labels)
+        n_samples, k = neighbor_labels.shape
+        out = np.empty(n_samples, dtype=neighbor_labels.dtype)
+        for i in range(n_samples):
+            labels, counts = np.unique(neighbor_labels[i], return_counts=True)
+            max_count = counts.max()
+            out[i] = labels[counts == max_count].min()
+        return out
 
     def predict(self, X):
         """
@@ -92,25 +110,28 @@ class KNNClassifier:
         X = np.asarray(X)
 
         # If a single sample is passed, turn it into shape (1, n_features).
+        if X.ndim == 1:
+            X.reshape(1, -1)
 
         predictions = []
         # Iterate over each test sample to predict its label.
         for sample_index, x in enumerate(X):
             if self.metric == "euclidean":
                 # Compute Euclidean distances from x to all training samples.
-                pass
+                distance = self._euclidean_distances(x)
             elif self.metric == "cosine":
                 # Compute cosine distances from x to all training samples.
-                pass
+                distance = self._cosine_distances(x)
             else:
                 raise ValueError(f"Unsupported metric: {self.metric}")
 
             # Find the indices of the k nearest neighbours.
-
+            nn_indices = np.argsort(distance)[:self.n_neighbors]
             # Get the labels of the nearest neighbours.
-
+            nn_labels = self.y_train[nn_indices]
             # Find the most common label and append it to predictions.
-
+            predicted_label = self._majority_vote(nn_labels)
+            predictions.append(predicted_label)
             if self.plot_neighbors and self.image_shape is not None:
                 test_image = x.reshape(self.image_shape)
                 neighbor_images = [
